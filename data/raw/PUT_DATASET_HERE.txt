@@ -1,0 +1,6 @@
+Put the downloaded rental CSV in this folder.
+
+Do not edit the raw file.
+
+Recommended filename:
+house_rent_raw.csv
