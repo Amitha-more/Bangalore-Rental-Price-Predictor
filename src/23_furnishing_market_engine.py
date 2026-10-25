@@ -28,9 +28,15 @@ def get_furnishing_market_reference(
     # 1. Load standardized live dataset
     # --------------------------------------------------
 
-    input_file = Path(
-        "data/processed/"
-        "all_live_clean_standardized.csv"
+    # Derive project root from this file's location
+    # src/23_furnishing_market_engine.py -> parents[1] is project root
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+    input_file = (
+        PROJECT_ROOT
+        / "data"
+        / "processed"
+        / "all_live_clean_standardized.csv"
     )
 
     df = pd.read_csv(input_file)
@@ -148,6 +154,7 @@ def get_furnishing_market_reference(
             "upper_size": upper_size,
             "data_refreshed": None,
             "furnishing_breakdown": {},
+            "ambiguous_availability_count": 0,
             "comparables": comparables,
         }
 
@@ -161,18 +168,7 @@ def get_furnishing_market_reference(
     )
 
     # --------------------------------------------------
-    # 9. Furnishing breakdown
-    # --------------------------------------------------
-
-    furnishing_breakdown = (
-        comparables["furnishing_status"]
-        .replace("", "Unknown")
-        .value_counts()
-        .to_dict()
-    )
-
-    # --------------------------------------------------
-    # 10. Try furnishing-specific comparables
+    # 9. Try furnishing-specific comparables
     # --------------------------------------------------
 
     furnishing_comparables = comparables[
@@ -186,7 +182,7 @@ def get_furnishing_market_reference(
     )
 
     # --------------------------------------------------
-    # 11. Decide whether to use furnishing-specific
+    # 10. Decide whether to use furnishing-specific
     #     or all-furnishing comparison
     # --------------------------------------------------
 
@@ -205,6 +201,17 @@ def get_furnishing_market_reference(
         comparison_type = (
             "All-furnishing fallback"
         )
+
+    # --------------------------------------------------
+    # 11. Furnishing breakdown of selected comparables
+    # --------------------------------------------------
+
+    furnishing_breakdown = (
+        selected["furnishing_status"]
+        .replace("", "Unknown")
+        .value_counts()
+        .to_dict()
+    )
 
     # --------------------------------------------------
     # 12. Calculate final market statistics
@@ -265,7 +272,32 @@ def get_furnishing_market_reference(
             )
 
     # --------------------------------------------------
-    # 15. Return results
+    # 15. Count ambiguous availability statuses
+    # --------------------------------------------------
+
+    ambiguous_availability_count = 0
+    if len(selected) > 0:
+        # Normalize statuses: handle NaN, strip whitespace, lowercase
+        normalized_statuses = (
+            selected["availabilityStatus"]
+            .fillna("")  # Convert NaN to empty string
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+
+        # Statuses that are not clearly available or unavailable
+        # (NaN/blank, whitespace-only, "inc info", "already listed", "unknown", etc.)
+        ambiguous = (
+            (normalized_statuses == "") |
+            (normalized_statuses.str.contains("inc info", na=False)) |
+            (normalized_statuses.str.contains("already listed", na=False)) |
+            (normalized_statuses.str.contains("unknown", na=False))
+        )
+        ambiguous_availability_count = int(ambiguous.sum())
+
+    # --------------------------------------------------
+    # 16. Return results
     # --------------------------------------------------
 
     return {
@@ -281,5 +313,6 @@ def get_furnishing_market_reference(
         "upper_size": upper_size,
         "data_refreshed": data_refreshed,
         "furnishing_breakdown": furnishing_breakdown,
+        "ambiguous_availability_count": ambiguous_availability_count,
         "comparables": selected,
     }
