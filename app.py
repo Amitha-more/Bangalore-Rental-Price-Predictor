@@ -285,6 +285,7 @@ if predict_button:
 
     furnishing_breakdown = result["market_furnishing_breakdown"]
     data_refreshed = result["market_data_refreshed"]
+    ambiguous_availability_count = result["market_ambiguous_availability_count"]
 
     comparison_to_market = result["comparison_to_market"]
 
@@ -435,6 +436,26 @@ if predict_button:
                 f"Market data snapshot timestamp: {data_refreshed}"
             )
 
+        # Warn about fallback comparison (mixed furnishing types)
+        if comparison_type == "All-furnishing fallback":
+            st.warning(
+                f"⚠️ **Fallback comparison used**: Only {furnishing_count} "
+                f"listing(s) matched your selected furnishing status. "
+                f"The median shown above is calculated from all {market_count} "
+                f"comparable listings across mixed furnishing types, not just "
+                f"your selected category."
+            )
+
+        # Warn about ambiguous availability
+        if ambiguous_availability_count > 0:
+            st.info(
+                f"ℹ️ **Data quality note**: {ambiguous_availability_count} of "
+                f"{market_count} comparable listing(s) have missing or "
+                f"ambiguous availability status. These listings may not be "
+                f"currently available."
+            )
+
+        # Existing sample quality warnings
         if sample_quality == "Very limited":
 
             st.warning(

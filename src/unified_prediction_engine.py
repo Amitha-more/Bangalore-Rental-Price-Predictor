@@ -142,5 +142,12 @@ def get_rental_assessment(
             market_result["data_refreshed"]
         ),
 
+        "market_ambiguous_availability_count": (
+            market_result.get(
+                "ambiguous_availability_count",
+                0
+            )
+        ),
+
         "comparison_to_market": comparison,
     }
